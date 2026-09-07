@@ -111,6 +111,62 @@ canvas {
     var(--px) 0 0 0 var(--border-bright);
 }
 
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+/*
+ * Scanlines ride on ::before so the hero needs no extra wrapper element. The
+ * gradient repeats on a 4px period (2px dark, 2px clear) to sit on the same
+ * pixel grid as --px. It paints over the text — that is the CRT look — so the
+ * dark stop stays faint enough to keep the heading readable.
+ */
+.hero {
+  position: relative;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.18) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+/* ── Pixel button ────────────────────────────────────────────────────────── */
+/*
+ * The hard offset shadow is the button's "depth". Pressing translates the face
+ * by exactly that offset and drops the shadow, so the face lands where the
+ * shadow was and the button reads as pushed in rather than merely darkened.
+ */
+.pixel-button {
+  background: var(--genre-color, #8b5cf6);
+  color: var(--text);
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+  padding: calc(var(--px) * 4) calc(var(--px) * 6);
+  border: 0;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.5);
+}
+
+.pixel-button:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.pixel-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ── Walker animations ───────────────────────────────────────────────────── */
 /*
  * A walker crosses the full viewport while bobbing up and down. Both motions
