@@ -1,0 +1,241 @@
+/* ── Fonts ───────────────────────────────────────────────────────────────── */
+/* Must stay above every other @import and rule — CSS requires @import first. */
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&family=Press+Start+2P&family=VT323&display=swap");
+
+@import "tailwindcss";
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --bg: #06060f;
+  --surface: #0c0c1e;
+  --card: #111128;
+  --border: #1e1e3a;
+  --border-bright: #2e2e58;
+  --text: #ddd6f8;
+  --text-soft: #8a84b0;
+
+  /* Overridden per genre at runtime, e.g. style={{ '--genre-color': '#b03030' }} */
+  --genre-color: #3d3d6b;
+
+  /* Font stacks */
+  --font-pixel: "Press Start 2P", "Courier New", monospace;
+  --font-terminal: "VT323", "Courier New", monospace;
+  --font-mono: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+  --font-body: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  /* One "pixel" — scale this to make the whole UI chunkier or finer */
+  --px: 4px;
+
+  color-scheme: dark;
+}
+
+/* ── Reset / base ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* Nothing in DreamWeave is ever rounded. */
+  border-radius: 0 !important;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Keep sprites and pixel assets crisp instead of smoothed. */
+img,
+canvas {
+  image-rendering: pixelated;
+}
+
+::selection {
+  background: var(--genre-color);
+  color: var(--text);
+}
+
+/* ── Pixel-art container ─────────────────────────────────────────────────── */
+/*
+ * Two stacked box-shadow "rings" with no blur and no spread-corners.
+ * Because each shadow is a hard-offset copy of the box, the corners are left
+ * unfilled — that notched corner is what reads as pixel art. No border, no
+ * border-radius, so nothing can soften it.
+ */
+.pixel-box {
+  position: relative;
+  background: var(--card);
+  padding: calc(var(--px) * 4);
+  box-shadow:
+    /* inner ring — bright */
+    0 calc(var(--px) * -1) 0 0 var(--border-bright),
+    0 var(--px) 0 0 var(--border-bright),
+    calc(var(--px) * -1) 0 0 0 var(--border-bright),
+    var(--px) 0 0 0 var(--border-bright),
+    /* outer ring — dark */
+    0 calc(var(--px) * -2) 0 0 var(--border),
+    0 calc(var(--px) * 2) 0 0 var(--border),
+    calc(var(--px) * -2) 0 0 0 var(--border),
+    calc(var(--px) * 2) 0 0 0 var(--border);
+}
+
+/* Tint the outer ring with the active genre. */
+.pixel-box--genre {
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--border-bright),
+    0 var(--px) 0 0 var(--border-bright),
+    calc(var(--px) * -1) 0 0 0 var(--border-bright),
+    var(--px) 0 0 0 var(--border-bright),
+    0 calc(var(--px) * -2) 0 0 var(--genre-color),
+    0 calc(var(--px) * 2) 0 0 var(--genre-color),
+    calc(var(--px) * -2) 0 0 0 var(--genre-color),
+    calc(var(--px) * 2) 0 0 0 var(--genre-color);
+}
+
+/* Single-ring variant for tighter elements (buttons, inputs, chips). */
+.pixel-box--thin {
+  padding: calc(var(--px) * 2);
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--border-bright),
+    0 var(--px) 0 0 var(--border-bright),
+    calc(var(--px) * -1) 0 0 0 var(--border-bright),
+    var(--px) 0 0 0 var(--border-bright);
+}
+
+/* ── Walker animations ───────────────────────────────────────────────────── */
+/*
+ * A walker crosses the full viewport while bobbing up and down. Both motions
+ * live in one keyframe set because they animate the same `transform` property —
+ * two separate animations would overwrite each other, not compose.
+ * The bob cycles every 10% of the run; `steps()` on the animation keeps it
+ * snapping between positions like a sprite sheet rather than gliding.
+ *
+ *   animation: walk-right 18s steps(24, end) infinite;
+ */
+@keyframes walk-right {
+  0%   { transform: translateX(-15vw) translateY(0); }
+  5%   { transform: translateX(-9vw)  translateY(calc(var(--px) * -1)); }
+  10%  { transform: translateX(-3vw)  translateY(0); }
+  15%  { transform: translateX(3vw)   translateY(calc(var(--px) * -1)); }
+  20%  { transform: translateX(9vw)   translateY(0); }
+  25%  { transform: translateX(15vw)  translateY(calc(var(--px) * -1)); }
+  30%  { transform: translateX(21vw)  translateY(0); }
+  35%  { transform: translateX(27vw)  translateY(calc(var(--px) * -1)); }
+  40%  { transform: translateX(33vw)  translateY(0); }
+  45%  { transform: translateX(39vw)  translateY(calc(var(--px) * -1)); }
+  50%  { transform: translateX(45vw)  translateY(0); }
+  55%  { transform: translateX(51vw)  translateY(calc(var(--px) * -1)); }
+  60%  { transform: translateX(57vw)  translateY(0); }
+  65%  { transform: translateX(63vw)  translateY(calc(var(--px) * -1)); }
+  70%  { transform: translateX(69vw)  translateY(0); }
+  75%  { transform: translateX(75vw)  translateY(calc(var(--px) * -1)); }
+  80%  { transform: translateX(81vw)  translateY(0); }
+  85%  { transform: translateX(87vw)  translateY(calc(var(--px) * -1)); }
+  90%  { transform: translateX(93vw)  translateY(0); }
+  95%  { transform: translateX(99vw)  translateY(calc(var(--px) * -1)); }
+  100% { transform: translateX(115vw) translateY(0); }
+}
+
+@keyframes walk-left {
+  0%   { transform: translateX(115vw) translateY(0)                      scaleX(-1); }
+  5%   { transform: translateX(99vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  10%  { transform: translateX(93vw)  translateY(0)                      scaleX(-1); }
+  15%  { transform: translateX(87vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  20%  { transform: translateX(81vw)  translateY(0)                      scaleX(-1); }
+  25%  { transform: translateX(75vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  30%  { transform: translateX(69vw)  translateY(0)                      scaleX(-1); }
+  35%  { transform: translateX(63vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  40%  { transform: translateX(57vw)  translateY(0)                      scaleX(-1); }
+  45%  { transform: translateX(51vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  50%  { transform: translateX(45vw)  translateY(0)                      scaleX(-1); }
+  55%  { transform: translateX(39vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  60%  { transform: translateX(33vw)  translateY(0)                      scaleX(-1); }
+  65%  { transform: translateX(27vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  70%  { transform: translateX(21vw)  translateY(0)                      scaleX(-1); }
+  75%  { transform: translateX(15vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  80%  { transform: translateX(9vw)   translateY(0)                      scaleX(-1); }
+  85%  { transform: translateX(3vw)   translateY(calc(var(--px) * -1))   scaleX(-1); }
+  90%  { transform: translateX(-3vw)  translateY(0)                      scaleX(-1); }
+  95%  { transform: translateX(-9vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
+  100% { transform: translateX(-15vw) translateY(0)                      scaleX(-1); }
+}
+
+/* Drop an emoji in a <span class="walker walker--right"> to send it across. */
+.walker {
+  position: fixed;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+  z-index: 0;
+}
+
+.walker--right {
+  animation: walk-right 18s steps(24, end) infinite;
+}
+
+.walker--left {
+  animation: walk-left 22s steps(24, end) infinite;
+}
+
+/* ── Error state ─────────────────────────────────────────────────────────── */
+/*
+ * Whole-pixel offsets only — a sub-pixel shake would blur the pixel look.
+ *
+ *   animation: pixel-shake 0.4s steps(1, end) 2;
+ */
+@keyframes pixel-shake {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(calc(var(--px) * -1), 0); }
+  20%  { transform: translate(var(--px), calc(var(--px) * -1)); }
+  30%  { transform: translate(calc(var(--px) * -2), 0); }
+  40%  { transform: translate(calc(var(--px) * 2), var(--px)); }
+  50%  { transform: translate(calc(var(--px) * -1), 0); }
+  60%  { transform: translate(var(--px), calc(var(--px) * -1)); }
+  70%  { transform: translate(calc(var(--px) * -1), 0); }
+  80%  { transform: translate(var(--px), var(--px)); }
+  90%  { transform: translate(calc(var(--px) * -1), 0); }
+  100% { transform: translate(0, 0); }
+}
+
+.pixel-shake {
+  animation: pixel-shake 0.4s steps(1, end) 2;
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.font-pixel {
+  font-family: var(--font-pixel);
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+}
+
+.font-terminal {
+  font-family: var(--font-terminal);
+  font-size: 1.35em;
+  line-height: 1.3;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Motion preference ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .walker,
+  .pixel-shake {
+    animation: none;
+  }
+
+  .walker {
+    display: none;
+  }
+}
