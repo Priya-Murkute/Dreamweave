@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import DreamInput from "@/components/DreamInput";
+import GenrePicker from "@/components/GenrePicker";
 
 /**
  * Anything shorter than this doesn't give the weaver enough to work with, so
@@ -60,20 +62,18 @@ export default function Home() {
       {/* ── Weaver ───────────────────────────────────────────────────────── */}
       <div className="mx-auto flex max-w-[700px] flex-col gap-10 px-6 py-14">
         <div>
-          {/* DreamInput goes here */}
-          {/* <DreamInput value={dreamText} onChange={setDreamText} onSafetyChange={setIsSafe} /> */}
-          <Slot
-            name="DreamInput"
-            note={`${dreamText.length} / ${MIN_DREAM_LENGTH} characters`}
+          <DreamInput
+            value={dreamText}
+            onChange={setDreamText}
+            genre={selectedGenre}
+            onSafetyChange={setIsSafe}
           />
         </div>
 
         <div>
-          {/* GenrePicker goes here */}
-          {/* <GenrePicker value={selectedGenre} onChange={setSelectedGenre} /> */}
-          <Slot
-            name="GenrePicker"
-            note={selectedGenre ?? "no genre selected"}
+          <GenrePicker
+            selectedGenre={selectedGenre}
+            onSelect={setSelectedGenre}
           />
         </div>
 
