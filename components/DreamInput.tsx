@@ -1,50 +1,12 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Filter } from "bad-words";
-
-const MIN_LENGTH = 50;
-const MAX_LENGTH = 500;
-
-/**
- * Built once at module scope rather than per render — the constructor loads the
- * whole word list, which is far too much work to repeat on every keystroke.
- */
-const filter = new Filter();
-
-/**
- * Phrases the profanity list doesn't cover.
- *
- * The first two are intent-based — about what the dream is asking for rather
- * than which words it uses. The third is a bare-word block, and it is far
- * blunter: it rejects "a shadow was trying to kill me" and "solving a murder
- * mystery", which are ordinary horror-genre dreams. Narrow it to /\brape\b/ if
- * the false-positive rate on the horror genre turns out to be a problem.
- */
-const RESTRICTED_PATTERNS = [
-  /self.?harm/i,
-  /how to (kill|hurt|abuse)/i,
-  /\b(kill|murder|rape)\b/i,
-];
-
-export function isSafeInput(text: string): { safe: boolean } {
-  if (!text.trim()) return { safe: true };
-  if (RESTRICTED_PATTERNS.some((pattern) => pattern.test(text))) {
-    return { safe: false };
-  }
-  return { safe: !filter.isProfane(text) };
-}
+import { isSafeInput } from "@/lib/safety";
+import { MAX_DREAM_LENGTH, MIN_DREAM_LENGTH } from "@/lib/validation";
 
 export interface DreamInputProps {
   value: string;
   onChange: (text: string) => void;
-  /**
-   * Part of the public API, but read via CSS rather than JS: GenrePicker owns
-   * the genre palette and writes the active colour to `--genre-color` on the
-   * document root, which the border below inherits. Mapping genre -> colour a
-   * second time here would just be a second source of truth to drift.
-   */
-  genre: string | null;
   onSafetyChange: (isSafe: boolean) => void;
 }
 
@@ -59,14 +21,10 @@ export default function DreamInput({
   const [isFocused, setIsFocused] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
 
-  // Re-runs on every keystroke, since `value` is the only input. Deriving this
-  // from `value` rather than from the onChange event also covers writes the
-  // parent makes directly (restore, reset, paste-in), which never fire onChange
-  // and would otherwise leave a stale verdict behind.
-  const isBlocked = useMemo(() => !isSafeInput(value).safe, [value]);
+  // Derived from `value` rather than the change event so it also covers writes
+  // the parent makes directly, which never fire onChange.
+  const isBlocked = useMemo(() => !isSafeInput(value), [value]);
 
-  // Held in a ref so an inline `onSafetyChange` from the parent doesn't make
-  // the effect below re-fire on every parent render.
   const onSafetyChangeRef = useRef(onSafetyChange);
   useEffect(() => {
     onSafetyChangeRef.current = onSafetyChange;
@@ -76,26 +34,24 @@ export default function DreamInput({
   useEffect(() => {
     onSafetyChangeRef.current(!isBlocked);
 
-    // Shake on the transition into blocked only. Re-shaking on every keystroke
-    // while the text is still blocked reads as noise rather than feedback.
+    // Shake only on the transition into blocked; re-shaking every keystroke
+    // while still blocked reads as noise.
     if (isBlocked && wasBlocked.current === false) setIsShaking(true);
     wasBlocked.current = isBlocked;
   }, [isBlocked]);
 
-  const isTooShort = value.length < MIN_LENGTH;
+  const isTooShort = value.length < MIN_DREAM_LENGTH;
 
   return (
-    <div className={isBlocked ? "input-error" : undefined}>
+    <div>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        // The keyframe runs twice, and animationend fires once both passes are
-        // done — clearing here lets a later block re-trigger the animation.
         onAnimationEnd={() => setIsShaking(false)}
         className={isShaking ? "pixel-shake" : undefined}
-        maxLength={MAX_LENGTH}
+        maxLength={MAX_DREAM_LENGTH}
         rows={6}
         aria-label="Your dream"
         aria-invalid={isBlocked}
@@ -128,13 +84,12 @@ export default function DreamInput({
             color: isTooShort ? "#ef4444" : "var(--text-soft)",
           }}
         >
-          {value.length} / {MAX_LENGTH}
+          {value.length} / {MAX_DREAM_LENGTH}
         </span>
       </div>
 
-      {/* Rendered only while blocked, so `role="alert"` announces on the
-          transition. A permanently-mounted box toggled with `display` would
-          announce nothing. */}
+      {/* Mounted only while blocked so role="alert" announces on the
+          transition; a hidden-but-present box would announce nothing. */}
       {isBlocked && (
         <p
           id={warningId}

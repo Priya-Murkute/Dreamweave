@@ -1,7 +1,4 @@
-/* ── Fonts ───────────────────────────────────────────────────────────────── */
-/* Must stay above every other @import and rule — CSS requires @import first. */
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Nunito:wght@400;600;700;900&family=Press+Start+2P&family=VT323&display=swap");
-
+/* Fonts load via the <link> tags in layout.tsx, not a second time here. */
 @import "tailwindcss";
 
 /* ── Tokens ──────────────────────────────────────────────────────────────── */
@@ -66,10 +63,8 @@ canvas {
 
 /* ── Pixel-art container ─────────────────────────────────────────────────── */
 /*
- * Two stacked box-shadow "rings" with no blur and no spread-corners.
- * Because each shadow is a hard-offset copy of the box, the corners are left
- * unfilled — that notched corner is what reads as pixel art. No border, no
- * border-radius, so nothing can soften it.
+ * Hard-offset shadow rings leave the corners unfilled — that notch is what
+ * reads as pixel art. No border, no radius, so nothing softens it.
  */
 .pixel-box {
   position: relative;
@@ -113,15 +108,23 @@ canvas {
 
 /* ── Hero ────────────────────────────────────────────────────────────────── */
 /*
- * Scanlines ride on ::before so the hero needs no extra wrapper element. The
- * gradient repeats on a 4px period (2px dark, 2px clear) to sit on the same
- * pixel grid as --px. It paints over the text — that is the CRT look — so the
- * dark stop stays faint enough to keep the heading readable.
+ * Scanlines on ::before, on the same 4px grid as --px.
  */
 .hero {
+  /*
+   * On the common ancestor: custom properties inherit down, not across, so the
+   * sibling subtitle could not read these from .typing-title.
+   */
+  --type-in: 1.6s;
+  --type-loop: 6s;
+
   position: relative;
   background: var(--surface);
   overflow: hidden;
+  /*
+   * Stacking context, so the orbs' screen blend stays inside this section.
+   */
+  isolation: isolate;
 }
 
 .hero::before {
@@ -129,6 +132,10 @@ canvas {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /*
+   * Above the orbs (0), below the text (2).
+   */
+  z-index: 1;
   background: repeating-linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.18) 0,
@@ -136,6 +143,166 @@ canvas {
     transparent 2px,
     transparent 4px
   );
+}
+
+/* ── Glowing pixel orbs ──────────────────────────────────────────────────── */
+/*
+ * A hard-edged square core with the glow in stacked box-shadows — blurring the
+ * element would dissolve the core and stop reading as pixel art. `screen` makes
+ * the halo additive; plain alpha on near-black reads as haze. Colour is RGB
+ * channels so one property drives core and halo alphas.
+ */
+.pixel-orb {
+  position: absolute;
+  z-index: 0;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  background: rgb(var(--orb-rgb));
+  box-shadow:
+    0 0 6px 1px rgb(var(--orb-rgb) / 0.9),
+    0 0 14px 4px rgb(var(--orb-rgb) / 0.45),
+    0 0 30px 10px rgb(var(--orb-rgb) / 0.18);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  /*
+   * Own compositor layer, so drift is not repainted on the main thread.
+   */
+  will-change: translate, transform, opacity;
+  /*
+   * X on `translate`, Y on `transform` — different properties, so they compose
+   * rather than overwrite. Mismatched periods (Y at 0.68 of X) trace a Lissajous
+   * path: continuously curved and never stopping, where one set of waypoints
+   * would decelerate into a corner at every stop.
+   */
+  animation:
+    orb-drift-x var(--orb-duration) ease-in-out var(--orb-delay) infinite,
+    orb-drift-y calc(var(--orb-duration) * 0.68) ease-in-out var(--orb-delay)
+      infinite,
+    orb-twinkle calc(var(--orb-duration) / 4) ease-in-out var(--orb-delay)
+      infinite;
+}
+
+@keyframes orb-drift-x {
+  0%,
+  100% {
+    translate: -14px;
+  }
+  50% {
+    translate: 14px;
+  }
+}
+
+@keyframes orb-drift-y {
+  0%,
+  100% {
+    transform: translateY(12px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes orb-twinkle {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Title typing effect ─────────────────────────────────────────────────── */
+/*
+ * The reveal animates `width` behind `overflow: hidden`. The end value must be
+ * an absolute length: `100%` is circular in a shrink-to-fit container and
+ * resolves to `auto`, which is not animatable. `ch` sidesteps both.
+ *
+ * TWO PLACES ENCODE ONE FACT: "DREAMWEAVE" is 10 characters — hence 10ch and
+ * steps(10). Change the title and both must change together.
+ */
+/* --type-duration is inherited from .hero, so the reveal below, the cursor's
+ * blink delay and the subtitle's fade all read one value. */
+.typing-title {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  color: #fff;
+}
+
+.typing-title__text {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: middle;
+  width: 0;
+  animation: typing-reveal var(--type-loop) steps(10, end) infinite;
+}
+
+/*
+ * Type in, hold, erase, beat, repeat. The 27% stop is --type-in as a fraction
+ * of --type-loop; keyframe percentages cannot be computed from custom
+ * properties, so changing either duration means recomputing it by hand.
+ */
+@keyframes typing-reveal {
+  0% {
+    width: 0;
+  }
+  27% {
+    width: 10ch;
+  }
+  68% {
+    width: 10ch;
+  }
+  88% {
+    width: 0;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+/*
+ * Sized in `em`, not the px of the original snippet: the heading is responsive
+ * (20px on mobile, 32px from `sm` up), so a fixed px cursor would be visibly
+ * out of proportion at one of the two sizes.
+ */
+/*
+ * 1s divides evenly into the 6s loop, so the two stay phase-aligned.
+ */
+.typing-title__cursor {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.75em;
+  margin-left: 0.15em;
+  background: #fff;
+  vertical-align: middle;
+  animation: typing-cursor-blink 1s step-end infinite;
+}
+
+@keyframes typing-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Fades in just after the title finishes typing, so the two don't compete. */
+.hero-subtitle {
+  position: relative;
+  z-index: 2;
+  opacity: 0;
+  animation: hero-subtitle-fade 0.6s ease-out calc(var(--type-in) + 0.2s)
+    forwards;
+}
+
+@keyframes hero-subtitle-fade {
+  to {
+    opacity: 1;
+  }
 }
 
 /* ── Pixel button ────────────────────────────────────────────────────────── */
@@ -169,65 +336,13 @@ canvas {
 
 /* ── Walker animations ───────────────────────────────────────────────────── */
 /*
- * A walker crosses the full viewport while bobbing up and down. Both motions
- * live in one keyframe set because they animate the same `transform` property —
- * two separate animations would overwrite each other, not compose.
- * The bob cycles every 10% of the run; `steps()` on the animation keeps it
- * snapping between positions like a sprite sheet rather than gliding.
- *
- *   animation: walk-right 18s steps(24, end) infinite;
+ * No keyframes by design — Walkers.tsx drives `transform` every frame. This
+ * only fixes the anchor at the viewport top-left, so a JS translate(x, y) lands
+ * where it says.
  */
-@keyframes walk-right {
-  0%   { transform: translateX(-15vw) translateY(0); }
-  5%   { transform: translateX(-9vw)  translateY(calc(var(--px) * -1)); }
-  10%  { transform: translateX(-3vw)  translateY(0); }
-  15%  { transform: translateX(3vw)   translateY(calc(var(--px) * -1)); }
-  20%  { transform: translateX(9vw)   translateY(0); }
-  25%  { transform: translateX(15vw)  translateY(calc(var(--px) * -1)); }
-  30%  { transform: translateX(21vw)  translateY(0); }
-  35%  { transform: translateX(27vw)  translateY(calc(var(--px) * -1)); }
-  40%  { transform: translateX(33vw)  translateY(0); }
-  45%  { transform: translateX(39vw)  translateY(calc(var(--px) * -1)); }
-  50%  { transform: translateX(45vw)  translateY(0); }
-  55%  { transform: translateX(51vw)  translateY(calc(var(--px) * -1)); }
-  60%  { transform: translateX(57vw)  translateY(0); }
-  65%  { transform: translateX(63vw)  translateY(calc(var(--px) * -1)); }
-  70%  { transform: translateX(69vw)  translateY(0); }
-  75%  { transform: translateX(75vw)  translateY(calc(var(--px) * -1)); }
-  80%  { transform: translateX(81vw)  translateY(0); }
-  85%  { transform: translateX(87vw)  translateY(calc(var(--px) * -1)); }
-  90%  { transform: translateX(93vw)  translateY(0); }
-  95%  { transform: translateX(99vw)  translateY(calc(var(--px) * -1)); }
-  100% { transform: translateX(115vw) translateY(0); }
-}
-
-@keyframes walk-left {
-  0%   { transform: translateX(115vw) translateY(0)                      scaleX(-1); }
-  5%   { transform: translateX(99vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  10%  { transform: translateX(93vw)  translateY(0)                      scaleX(-1); }
-  15%  { transform: translateX(87vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  20%  { transform: translateX(81vw)  translateY(0)                      scaleX(-1); }
-  25%  { transform: translateX(75vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  30%  { transform: translateX(69vw)  translateY(0)                      scaleX(-1); }
-  35%  { transform: translateX(63vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  40%  { transform: translateX(57vw)  translateY(0)                      scaleX(-1); }
-  45%  { transform: translateX(51vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  50%  { transform: translateX(45vw)  translateY(0)                      scaleX(-1); }
-  55%  { transform: translateX(39vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  60%  { transform: translateX(33vw)  translateY(0)                      scaleX(-1); }
-  65%  { transform: translateX(27vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  70%  { transform: translateX(21vw)  translateY(0)                      scaleX(-1); }
-  75%  { transform: translateX(15vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  80%  { transform: translateX(9vw)   translateY(0)                      scaleX(-1); }
-  85%  { transform: translateX(3vw)   translateY(calc(var(--px) * -1))   scaleX(-1); }
-  90%  { transform: translateX(-3vw)  translateY(0)                      scaleX(-1); }
-  95%  { transform: translateX(-9vw)  translateY(calc(var(--px) * -1))   scaleX(-1); }
-  100% { transform: translateX(-15vw) translateY(0)                      scaleX(-1); }
-}
-
-/* Drop an emoji in a <span class="walker walker--right"> to send it across. */
 .walker {
   position: fixed;
+  top: 0;
   left: 0;
   pointer-events: none;
   user-select: none;
@@ -235,19 +350,20 @@ canvas {
   z-index: 0;
 }
 
-.walker--right {
-  animation: walk-right 18s steps(24, end) infinite;
-}
-
-.walker--left {
-  animation: walk-left 22s steps(24, end) infinite;
+/*
+ * Puts content in front of the walkers. A positioned element with a z-index
+ * paints above static content whatever the document order, so <main> has to join
+ * the positioned tier. A negative z-index on .walker would instead hide them
+ * behind body's own background.
+ */
+main {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Error state ─────────────────────────────────────────────────────────── */
 /*
- * Whole-pixel offsets only — a sub-pixel shake would blur the pixel look.
- *
- *   animation: pixel-shake 0.4s steps(1, end) 2;
+ * Whole-pixel offsets only — sub-pixel would blur the pixel look.
  */
 @keyframes pixel-shake {
   0%   { transform: translate(0, 0); }
@@ -265,6 +381,72 @@ canvas {
 
 .pixel-shake {
   animation: pixel-shake 0.4s steps(1, end) 2;
+}
+
+/* ── Story panel ─────────────────────────────────────────────────────────── */
+/*
+ * Scanlines paint over the text at 0.08 alpha — faint enough to stay readable.
+ */
+.story-panel {
+  position: relative;
+  background: #080814;
+  border: 3px solid var(--genre-color, #8b5cf6);
+  padding: 28px 32px;
+}
+
+.story-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+}
+
+/*
+ * steps(1) not a fade: a terminal cursor snaps, it does not glow.
+ */
+@keyframes story-cursor-blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.story-cursor {
+  color: #ffb000;
+  animation: story-cursor-blink 1s steps(1, end) infinite;
+}
+
+/*
+ * Percent top/left resolve against the containing block, so the patrol re-fits
+ * the panel as it grows while streaming — no JS, no re-measuring. (Percent
+ * `translate` resolves against the element's own size: wrong reference.) The
+ * constant translate(-50%, -50%) centres the glyph on the border.
+ */
+@keyframes patrol-perimeter {
+  0%   { top: 0%;   left: 0%; }   /* top-left corner    */
+  25%  { top: 0%;   left: 100%; } /* → along the top    */
+  50%  { top: 100%; left: 100%; } /* ↓ down the right    */
+  75%  { top: 100%; left: 0%; }   /* ← along the bottom */
+  100% { top: 0%;   left: 0%; }   /* ↑ up the left, closing the loop */
+}
+
+.story-walker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  font-size: 20px;
+  animation: patrol-perimeter 7s steps(20, end) infinite;
 }
 
 /* ── Typography helpers ──────────────────────────────────────────────────── */
@@ -286,12 +468,33 @@ canvas {
 
 /* ── Motion preference ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .walker,
-  .pixel-shake {
+  .pixel-shake,
+  .story-cursor,
+  .story-walker,
+  .pixel-orb,
+  .typing-title__cursor {
     animation: none;
   }
 
-  .walker {
+  /*
+   * These animate out of a hidden resting state, so cancelling the animation
+   * alone would leave them invisible for good — override the state too.
+   */
+  .typing-title__text {
+    animation: none;
+    width: auto;
+  }
+
+  .hero-subtitle {
+    animation: none;
+    opacity: 1;
+  }
+
+  /*
+   * Backstop: Walkers.tsx already checks this query before starting its loop.
+   */
+  .walker,
+  .story-walker {
     display: none;
   }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Walkers from "@/components/Walkers";
 
 export const metadata: Metadata = {
   title: "DreamWeave",
@@ -21,7 +22,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/*
+          <Walkers /> is a client component: it renders nothing on the server
+          and fills in a randomized set after mount (see its own comment for
+          why). Rendered once here, at the root, rather than per-page.
+        */}
+        <Walkers />
+        {children}
+      </body>
     </html>
   );
 }
