@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import DreamInput from "@/components/DreamInput";
 import GenrePicker from "@/components/GenrePicker";
+import SharePanel from "@/components/SharePanel";
 import StoryDisplay, {
   type StoryDisplayHandle,
 } from "@/components/StoryDisplay";
@@ -25,18 +26,6 @@ const PIXEL_ORBS = [
   { left: "84%", top: "22%", size: 8, rgb: "255 230 109", duration: 14, delay: -8 },
   { left: "90%", top: "72%", size: 4, rgb: "255 217 61", duration: 12, delay: -4 },
 ] as const;
-
-/** Stand-in for SharePanel, which is not built yet. */
-function Slot({ name, note }: { name: string; note: string }) {
-  return (
-    <div className="pixel-box text-center">
-      <p className="font-mono m-0 text-xs" style={{ color: "var(--text-soft)" }}>
-        {`<${name} />`}
-      </p>
-      <p className="font-mono mt-2 mb-0 text-xs opacity-60">{note}</p>
-    </div>
-  );
-}
 
 export default function Home() {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
@@ -134,12 +123,18 @@ export default function Home() {
           />
         </div>
 
-        <div>
-          <Slot
-            name="SharePanel"
-            note={story ? `ready: "${story.title}"` : "awaiting a woven story"}
-          />
-        </div>
+        {/* Needs a finished title and body, so it appears only once the
+            stream has completed. */}
+        {story !== null && selectedGenre !== null && (
+          <div>
+            <SharePanel
+              title={story.title}
+              story={story.body}
+              dream={dreamText}
+              genre={selectedGenre}
+            />
+          </div>
+        )}
       </div>
     </main>
   );
