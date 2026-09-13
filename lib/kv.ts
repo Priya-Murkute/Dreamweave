@@ -13,14 +13,42 @@ export interface StoredStory {
 }
 
 /**
- * `@vercel/kv` reads these lazily and throws on first use if either is missing,
- * which surfaces as an opaque 500. Checking up front lets callers answer with
- * something a developer can act on.
+ * Why the store is unusable, or null when it is fine.
+ *
+ * `@vercel/kv` reads its two variables lazily and only complains on first use,
+ * so every kind of misconfiguration used to surface as one generic failure at
+ * write time. The URL is checked here as well as the presence of both values,
+ * because the commonest mistake is pasting Upstash's `redis://` connection
+ * string in place of its REST endpoint — the client then rejects the URL
+ * before it opens a connection, which looks identical to the store being down.
+ *
+ * The returned string is for logs only. It never quotes the URL: the
+ * `redis://` form embeds the password in its userinfo.
  */
+export function kvConfigProblem(): string | null {
+  const url = process.env.KV_REST_API_URL?.trim();
+  const token = process.env.KV_REST_API_TOKEN?.trim();
+
+  if (!url && !token) return "KV_REST_API_URL and KV_REST_API_TOKEN are unset";
+  if (!url) return "KV_REST_API_URL is unset";
+  if (!token) return "KV_REST_API_TOKEN is unset";
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "KV_REST_API_URL is not a valid URL — it should be the https:// REST endpoint Upstash lists under 'REST API'";
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return `KV_REST_API_URL uses "${parsed.protocol}//" — that is the Redis connection string, not the REST endpoint. Upstash lists the https:// one separately, under 'REST API'`;
+  }
+
+  return null;
+}
+
 export function isKvConfigured(): boolean {
-  return Boolean(
-    process.env.KV_REST_API_URL?.trim() && process.env.KV_REST_API_TOKEN?.trim(),
-  );
+  return kvConfigProblem() === null;
 }
 
 /**

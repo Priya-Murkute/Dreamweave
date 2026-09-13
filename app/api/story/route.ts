@@ -1,5 +1,5 @@
 import {
-  isKvConfigured,
+  kvConfigProblem,
   KvAuthError,
   saveStory,
   type StoredStory,
@@ -22,10 +22,9 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
-  if (!isKvConfigured()) {
-    console.error(
-      "[api/story] KV_REST_API_URL and KV_REST_API_TOKEN are not set — cannot save.",
-    );
+  const configProblem = kvConfigProblem();
+  if (configProblem !== null) {
+    console.error("[api/story] cannot save —", configProblem);
     return jsonError("Sharing is not configured on this server.", 503);
   }
 

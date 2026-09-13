@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import PixelEmotes from "@/components/PixelEmotes";
 import { genreOption } from "@/lib/genres";
 import {
-  isKvConfigured,
+  kvConfigProblem,
   KvAuthError,
   loadStory,
   type StoredStory,
@@ -28,8 +28,9 @@ type PageProps = { params: Promise<{ id: string }> };
  * not-found page, not a 500.
  */
 const readStory = cache(async (id: string): Promise<StoredStory | null> => {
-  if (!isKvConfigured()) {
-    console.error("[story/[id]] KV is not configured — cannot read.");
+  const configProblem = kvConfigProblem();
+  if (configProblem !== null) {
+    console.error("[story/[id]] cannot read —", configProblem);
     return null;
   }
   try {

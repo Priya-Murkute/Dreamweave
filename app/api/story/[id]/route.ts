@@ -1,4 +1,4 @@
-import { isKvConfigured, isStoryId, KvAuthError, loadStory } from "@/lib/kv";
+import { isStoryId, kvConfigProblem, KvAuthError, loadStory } from "@/lib/kv";
 
 function jsonError(error: string, status: number) {
   return Response.json({ error }, { status });
@@ -12,8 +12,9 @@ export async function GET(
 
   // Answered before touching KV so an unconfigured server is distinguishable
   // from a story that genuinely expired.
-  if (!isKvConfigured()) {
-    console.error("[api/story/[id]] KV is not configured — cannot read.");
+  const configProblem = kvConfigProblem();
+  if (configProblem !== null) {
+    console.error("[api/story/[id]] cannot read —", configProblem);
     return jsonError("Sharing is not configured on this server.", 503);
   }
 
