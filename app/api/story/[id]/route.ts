@@ -1,4 +1,4 @@
-import { isKvConfigured, isStoryId, loadStory } from "@/lib/kv";
+import { isKvConfigured, isStoryId, KvAuthError, loadStory } from "@/lib/kv";
 
 function jsonError(error: string, status: number) {
   return Response.json({ error }, { status });
@@ -23,6 +23,14 @@ export async function GET(
   try {
     data = await loadStory(id);
   } catch (error) {
+    if (error instanceof KvAuthError) {
+      console.error(
+        "[api/story/[id]] KV rejected the credentials. Check KV_REST_API_URL " +
+          "and KV_REST_API_TOKEN:",
+        error.message,
+      );
+      return jsonError("Sharing is misconfigured on this server.", 503);
+    }
     console.error("[api/story/[id]] KV read failed:", error);
     return jsonError("Could not load that story. Try again.", 502);
   }

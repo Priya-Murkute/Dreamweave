@@ -4,7 +4,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PixelEmotes from "@/components/PixelEmotes";
 import { genreOption } from "@/lib/genres";
-import { isKvConfigured, loadStory, type StoredStory } from "@/lib/kv";
+import {
+  isKvConfigured,
+  KvAuthError,
+  loadStory,
+  type StoredStory,
+} from "@/lib/kv";
 
 /**
  * A KV read must not run at build time. There is no generateStaticParams here,
@@ -30,6 +35,17 @@ const readStory = cache(async (id: string): Promise<StoredStory | null> => {
   try {
     return await loadStory(id);
   } catch (error) {
+    // Still renders not-found — a visitor to a shared link can do nothing with
+    // a config fault — but the log has to distinguish it, or a rejected
+    // credential is indistinguishable from an expired story.
+    if (error instanceof KvAuthError) {
+      console.error(
+        "[story/[id]] KV rejected the credentials. Shared links will all read " +
+          "as expired until KV_REST_API_URL/KV_REST_API_TOKEN are fixed:",
+        error.message,
+      );
+      return null;
+    }
     console.error("[story/[id]] KV read failed:", error);
     return null;
   }

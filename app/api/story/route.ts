@@ -1,4 +1,9 @@
-import { isKvConfigured, saveStory, type StoredStory } from "@/lib/kv";
+import {
+  isKvConfigured,
+  KvAuthError,
+  saveStory,
+  type StoredStory,
+} from "@/lib/kv";
 import { clientKey, rateLimit } from "@/lib/rate-limit";
 import { validateStoryPayload } from "@/lib/validation";
 
@@ -51,6 +56,17 @@ export async function POST(request: Request): Promise<Response> {
   try {
     await saveStory(id, record);
   } catch (error) {
+    // Credentials present but rejected. Says so plainly rather than inviting a
+    // retry that cannot succeed, and names the read-only token because that is
+    // the usual cause — the token works, but not for writes.
+    if (error instanceof KvAuthError) {
+      console.error(
+        "[api/story] KV rejected the credentials. Check KV_REST_API_URL and " +
+          "KV_REST_API_TOKEN — a read-only Upstash token cannot write:",
+        error.message,
+      );
+      return jsonError("Sharing is misconfigured on this server.", 503);
+    }
     console.error("[api/story] KV write failed:", error);
     return jsonError("Could not save your story. Try again.", 502);
   }

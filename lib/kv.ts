@@ -47,8 +47,51 @@ function isStoredStory(value: unknown): value is StoredStory {
   );
 }
 
+/**
+ * Credentials that are present but wrong. Upstash says `Unauthorized` for a bad
+ * token or URL, and `NOPERM` when the token is real but lacks the command —
+ * which is what copying `UPSTASH_REDIS_REST_READONLY_TOKEN` produces: reads
+ * succeed, writes are refused.
+ *
+ * Worth separating from a transient blip, because "try again" is useless advice
+ * for a misconfiguration and it will never start working on its own.
+ */
+export class KvAuthError extends Error {}
+
+const AUTH_FAILURE = /(unauthorized|noperm|forbidden|wrongpass|invalid[ _-]?token)/i;
+
+/**
+ * `@upstash/redis` appends `, command was: [...]` to its errors — and that echo
+ * contains the story the caller tried to write. Only the part before it is the
+ * Redis error, so a dream that happens to use the word "unauthorized" cannot be
+ * read as a credential fault.
+ */
+function redisErrorText(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  return `${error.name} ${error.message.split(", command was:")[0]}`;
+}
+
+/** Exported for tests; callers should catch `KvAuthError` instead. */
+export function isAuthFailure(error: unknown): boolean {
+  return AUTH_FAILURE.test(redisErrorText(error));
+}
+
+function rethrow(error: unknown): never {
+  if (isAuthFailure(error)) {
+    throw new KvAuthError(
+      error instanceof Error ? error.message : String(error),
+      { cause: error },
+    );
+  }
+  throw error;
+}
+
 export async function saveStory(id: string, story: StoredStory): Promise<void> {
-  await kv.set(id, story, { ex: STORY_TTL_SECONDS });
+  try {
+    await kv.set(id, story, { ex: STORY_TTL_SECONDS });
+  } catch (error) {
+    rethrow(error);
+  }
 }
 
 /**
@@ -58,7 +101,12 @@ export async function saveStory(id: string, story: StoredStory): Promise<void> {
 export async function loadStory(id: string): Promise<StoredStory | null> {
   if (!isStoryId(id)) return null;
 
-  const data = await kv.get<unknown>(id);
+  let data: unknown;
+  try {
+    data = await kv.get<unknown>(id);
+  } catch (error) {
+    rethrow(error);
+  }
   if (data === null || data === undefined) return null;
 
   if (!isStoredStory(data)) {
