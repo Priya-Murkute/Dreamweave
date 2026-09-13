@@ -1,4 +1,4 @@
-import type { Genre } from "@/components/GenrePicker";
+import type { Genre } from "@/lib/genres";
 
 /**
  * The closing format line in every prompt is load-bearing: splitStory divides

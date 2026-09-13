@@ -1,4 +1,4 @@
-import type { Genre } from "@/components/GenrePicker";
+import type { Genre } from "@/lib/genres";
 
 /**
  * Offline fallback used when no model is configured.

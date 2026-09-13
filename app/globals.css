@@ -449,6 +449,24 @@ main {
   animation: patrol-perimeter 7s steps(20, end) infinite;
 }
 
+/* ── Genre emotes ────────────────────────────────────────────────────────── */
+/*
+ * Whole-pixel steps rather than a smooth float, to sit on the same grid as the
+ * rest of the pixel art. Each emote sets its own negative --emote-delay, which
+ * starts it mid-cycle so the three bob out of phase from the first frame.
+ */
+@keyframes emote-bob {
+  0%,
+  100% { transform: translateY(0); }
+  50%  { transform: translateY(calc(var(--px) * -1)); }
+}
+
+.pixel-emote {
+  display: inline-block;
+  animation: emote-bob 1.8s steps(2, end) infinite;
+  animation-delay: var(--emote-delay, 0s);
+}
+
 /* ── Typography helpers ──────────────────────────────────────────────────── */
 .font-pixel {
   font-family: var(--font-pixel);
@@ -472,6 +490,7 @@ main {
   .story-cursor,
   .story-walker,
   .pixel-orb,
+  .pixel-emote,
   .typing-title__cursor {
     animation: none;
   }

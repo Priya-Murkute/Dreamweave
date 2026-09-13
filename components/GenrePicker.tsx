@@ -1,70 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { type Genre, GENRE_OPTIONS, withAlpha } from "@/lib/genres";
 
-export type Genre = "horror" | "funny" | "romantic" | "sad" | "dramatic";
-
-interface GenreOption {
-  id: Genre;
-  color: string;
-  name: string;
-  emoji: string;
-  emojis: string[];
-  desc: string;
-}
-
-/**
- * Module scope rather than the component body — the list is static, so
- * rebuilding it on every render would be pure waste.
- */
-const GENRES: readonly GenreOption[] = [
-  {
-    id: "horror",
-    color: "#ef4444",
-    name: "HORROR",
-    emoji: "👻",
-    emojis: ["👻", "💀", "🕷️"],
-    desc: "Dark and suspenseful. Ends with a twist.",
-  },
-  {
-    id: "funny",
-    color: "#fbbf24",
-    name: "FUNNY",
-    emoji: "😂",
-    emojis: ["😂", "🤡", "🎉"],
-    desc: "Absurd, escalating, full of chaos.",
-  },
-  {
-    id: "romantic",
-    color: "#f472b6",
-    name: "ROMANTIC",
-    emoji: "❤️",
-    emojis: ["❤️", "🌹", "💫"],
-    desc: "Warm and tender. Dream becomes metaphor.",
-  },
-  {
-    id: "sad",
-    color: "#60a5fa",
-    name: "SAD",
-    emoji: "😢",
-    emojis: ["😢", "💧", "☁️"],
-    desc: "Melancholy and poignant. Lingers after.",
-  },
-  {
-    id: "dramatic",
-    color: "#a78bfa",
-    name: "DRAMATIC",
-    emoji: "⚡",
-    emojis: ["⚡", "💥", "🌊"],
-    desc: "Epic, cinematic. Maximum intensity.",
-  },
-];
-
-/** Hover and glow need the genre colour at partial alpha; every colour above is 6-digit hex. */
-function withAlpha(hex: string, alpha: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
+export type { Genre } from "@/lib/genres";
 
 export interface GenrePickerProps {
   selectedGenre: string | null;
@@ -81,7 +20,7 @@ export default function GenrePicker({
   // also tracks selections made elsewhere (restored state, a reset button) and
   // never disagrees with what's actually highlighted.
   useEffect(() => {
-    const match = GENRES.find((genre) => genre.id === selectedGenre);
+    const match = GENRE_OPTIONS.find((genre) => genre.id === selectedGenre);
     const root = document.documentElement;
 
     if (match) {
@@ -102,7 +41,7 @@ export default function GenrePicker({
         gap: 10,
       }}
     >
-      {GENRES.map((genre) => {
+      {GENRE_OPTIONS.map((genre) => {
         const isSelected = genre.id === selectedGenre;
         const isHovered = hovered === genre.id;
 
